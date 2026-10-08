@@ -252,9 +252,12 @@ export default async function TrackingPage({
     data: shipment,
     error: shipmentError,
   } = await supabase
-    .from("shipments")
-    .select("*")
-    .eq("tracking_number", cleanTrackingNumber)
+    .rpc(
+      "get_public_shipment",
+      {
+        p_tracking_number: cleanTrackingNumber,
+      }
+    )
     .maybeSingle();
 
   if (shipmentError || !shipment) {
