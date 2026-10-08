@@ -669,10 +669,29 @@ function OperationsDashboard() {
                       );
 
                     return (
-                      <Link
+                      <div
                         key={shipment.id}
-                        href={`/operations/shipment?shipment=${shipment.id}`}
-                        className="block p-5 transition hover:bg-slate-50"
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => {
+                          window.location.href =
+                            `/operations/shipment?shipment=${encodeURIComponent(
+                              shipment.id
+                            )}`;
+                        }}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" ||
+                            event.key === " "
+                          ) {
+                            event.preventDefault();
+                            window.location.href =
+                              `/operations/shipment?shipment=${encodeURIComponent(
+                                shipment.id
+                              )}`;
+                          }
+                        }}
+                        className="block cursor-pointer p-5 transition hover:bg-slate-50"
                       >
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                           <div className="min-w-0">
@@ -751,7 +770,7 @@ function OperationsDashboard() {
                             </div>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     );
                   }
                 )

@@ -670,7 +670,7 @@ export default function ShipmentManagementClient({
                 value={placeInput}
                 onChange={(e) => setPlaceInput(e.target.value)}
                 placeholder="Example: Dubai, UAE"
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 placeholder:text-slate-500 placeholder:font-medium outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -681,7 +681,7 @@ export default function ShipmentManagementClient({
                 value={latInput}
                 onChange={(e) => setLatInput(e.target.value)}
                 placeholder="Example: 25.2048"
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 placeholder:text-slate-500 placeholder:font-medium outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -692,12 +692,12 @@ export default function ShipmentManagementClient({
                 value={lngInput}
                 onChange={(e) => setLngInput(e.target.value)}
                 placeholder="Example: 55.2708"
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 placeholder:text-slate-500 placeholder:font-medium outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               />
             </div>
           </div>
 
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-sm font-medium text-slate-600">
             Fill in only the place name to auto-locate it, or fill in latitude + longitude for an exact position
             (the place name becomes just a label if you use both).
           </p>
@@ -781,7 +781,7 @@ export default function ShipmentManagementClient({
                   <select
                     value={status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                    className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-semibold text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   >
                     {STATUS_OPTIONS.map((item) => (
                       <option key={item.code} value={item.status}>
@@ -797,7 +797,7 @@ export default function ShipmentManagementClient({
                     type="text"
                     value={statusCode}
                     readOnly
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    className="w-full rounded-lg border-2 border-slate-200 bg-slate-100 px-4 py-3 text-base font-semibold text-slate-700 outline-none"
                   />
                 </div>
 
@@ -808,7 +808,7 @@ export default function ShipmentManagementClient({
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Example: Warsaw Airport"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                    className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 placeholder:text-slate-500 placeholder:font-medium outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
@@ -818,7 +818,7 @@ export default function ShipmentManagementClient({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                    className="w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 placeholder:text-slate-500 placeholder:font-medium outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 

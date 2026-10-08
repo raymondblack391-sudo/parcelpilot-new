@@ -25,3 +25,5 @@ proxy.ts.disabled
 **/*backup*
 **/*Backup*
 **/*.save
+.vercel
+.env*

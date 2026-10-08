@@ -14,7 +14,6 @@ type FormData = {
   senderAddress: string;
   receiverAddress: string;
   customerEmail: string;
-  customerPhone: string;
 
   originCountry: string;
   originCity: string;
@@ -109,7 +108,6 @@ const initialForm: FormData = {
   senderAddress: "",
   receiverAddress: "",
   customerEmail: "",
-  customerPhone: "",
 
   originCountry: "",
   originCity: "",
@@ -138,7 +136,7 @@ const initialForm: FormData = {
   declaredValue: "",
   currency: "EUR",
 
-  initialStage: "Picked Up",
+  initialStage: "Origin Airport",
   operationalLocation: "",
   currentLatitude: "",
   currentLongitude: "",
@@ -239,19 +237,7 @@ export default function CreateShipmentPage() {
     setErrorMessage("");
 
     if (currentStep === 1) {
-      if (!form.trackingNumber.trim()) {
-        setErrorMessage(
-          "Tracking number is required."
-        );
-        return false;
-      }
-
-      if (form.trackingNumber.trim().length < 5) {
-        setErrorMessage(
-          "Tracking number must contain at least 5 characters."
-        );
-        return false;
-      }
+      // Tracking numbers are generated automatically when the shipment is created.
 
       if (!form.senderName.trim()) {
         setErrorMessage(
@@ -291,20 +277,6 @@ export default function CreateShipmentPage() {
       if (!isValidEmail(form.customerEmail)) {
         setErrorMessage(
           "Please enter a valid customer email address."
-        );
-        return false;
-      }
-
-      if (!form.customerPhone.trim()) {
-        setErrorMessage(
-          "Customer phone number is required for SMS notifications."
-        );
-        return false;
-      }
-
-      if (form.customerPhone.trim().length < 7) {
-        setErrorMessage(
-          "Please enter a valid customer phone number."
         );
         return false;
       }
@@ -495,6 +467,46 @@ export default function CreateShipmentPage() {
         return false;
       }
 
+      /*
+       * Air shipments start at their origin airport.
+       * The origin coordinates collected in Step 2 become
+       * the initial tracking coordinates automatically.
+       */
+      if (
+        form.shippingMode === "Air Freight" &&
+        form.originLatitude.trim() &&
+        form.originLongitude.trim()
+      ) {
+        const originLatitude = Number(
+          form.originLatitude
+        );
+
+        const originLongitude = Number(
+          form.originLongitude
+        );
+
+        if (
+          isValidCoordinate(
+            originLatitude,
+            originLongitude
+          )
+        ) {
+          if (!form.currentLatitude.trim()) {
+            setForm((previous) => ({
+              ...previous,
+              currentLatitude:
+                previous.originLatitude,
+              currentLongitude:
+                previous.originLongitude,
+              operationalLocation:
+                previous.operationalLocation.trim() ||
+                previous.originAirport.trim() ||
+                `${previous.originCity}, ${previous.originCountry}`,
+            }));
+          }
+        }
+      }
+
       if (!form.operationalLocation.trim()) {
         setErrorMessage(
           "Operational location is required."
@@ -583,47 +595,7 @@ export default function CreateShipmentPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    let createdShipmentId: string | null = null;
-
     try {
-      const normalizedTrackingNumber =
-        form.trackingNumber
-          .trim()
-          .toUpperCase();
-
-      const {
-        data: currentUser,
-      } = await supabase.auth.getUser();
-
-      const performedBy =
-        currentUser.user?.email ||
-        currentUser.user?.id ||
-        null;
-
-      const {
-        data: existingShipment,
-        error: duplicateError,
-      } = await supabase
-        .from("shipments")
-        .select("id")
-        .eq(
-          "tracking_number",
-          normalizedTrackingNumber
-        )
-        .maybeSingle();
-
-      if (duplicateError) {
-        throw new Error(
-          `Unable to check tracking number: ${duplicateError.message}`
-        );
-      }
-
-      if (existingShipment) {
-        throw new Error(
-          `Tracking number ${normalizedTrackingNumber} already exists.`
-        );
-      }
-
       const originLatitude = Number(
         form.originLatitude
       );
@@ -640,17 +612,17 @@ export default function CreateShipmentPage() {
         form.destinationLongitude
       );
 
-      const currentLatitude = Number(
-        form.currentLatitude
-      );
+      const currentLatitude =
+        form.shippingMode === "Air Freight"
+          ? originLatitude
+          : Number(form.currentLatitude);
 
-      const currentLongitude = Number(
-        form.currentLongitude
-      );
+      const currentLongitude =
+        form.shippingMode === "Air Freight"
+          ? originLongitude
+          : Number(form.currentLongitude);
 
-      const packageCount = Number(
-        form.packageCount
-      );
+      const packageCount = Number(form.packageCount);
 
       const packageWeight = form.packageWeight
         ? Number(form.packageWeight)
@@ -672,15 +644,9 @@ export default function CreateShipmentPage() {
         ? Number(form.declaredValue)
         : null;
 
-      const status =
-        getStatusFromStage(
-          form.initialStage
-        );
+      const status = getStatusFromStage(form.initialStage);
 
-      const statusCode =
-        getStatusCodeFromStage(
-          form.initialStage
-        );
+      const statusCode = getStatusCodeFromStage(form.initialStage);
 
       const deliveredAt =
         form.initialStage === "Delivered"
@@ -693,126 +659,83 @@ export default function CreateShipmentPage() {
           : null;
 
       const shipmentPayload = {
-        tracking_number:
-          normalizedTrackingNumber,
+        sender_name: form.senderName.trim(),
+        receiver_name: form.receiverName.trim(),
+        sender_address: form.senderAddress.trim(),
+        receiver_address: form.receiverAddress.trim(),
+        customer_email: form.customerEmail.trim(),
 
-        sender_name:
-          form.senderName.trim(),
-
-        receiver_name:
-          form.receiverName.trim(),
-
-        sender_address:
-          form.senderAddress.trim(),
-
-        receiver_address:
-          form.receiverAddress.trim(),
-
-        customer_email:
-          form.customerEmail.trim(),
-
-        customer_phone:
-          form.customerPhone.trim(),
-
-        origin_country:
-          form.originCountry.trim(),
-
-        destination_country:
-          form.destinationCountry.trim(),
+        origin_country: form.originCountry.trim(),
+        destination_country: form.destinationCountry.trim(),
 
         origin_airport:
-          form.originAirport.trim() ||
-          null,
+          form.originAirport.trim() || null,
 
         destination_airport:
-          form.destinationAirport.trim() ||
-          null,
+          form.destinationAirport.trim() || null,
 
-        origin_latitude:
-          originLatitude,
+        origin_latitude: originLatitude,
+        origin_longitude: originLongitude,
 
-        origin_longitude:
-          originLongitude,
+        destination_latitude: destinationLatitude,
+        destination_longitude: destinationLongitude,
 
-        destination_latitude:
-          destinationLatitude,
+        current_latitude: currentLatitude,
+        current_longitude: currentLongitude,
 
-        destination_longitude:
-          destinationLongitude,
+        shipping_mode: form.shippingMode.trim(),
+        service_type: form.serviceType.trim(),
 
-        current_latitude:
-          currentLatitude,
+        package_weight: packageWeight,
+        package_length: packageLength,
+        package_width: packageWidth,
+        package_height: packageHeight,
+        package_count: packageCount,
 
-        current_longitude:
-          currentLongitude,
-
-        shipping_mode:
-          form.shippingMode.trim(),
-
-        service_type:
-          form.serviceType.trim(),
-
-        package_weight:
-          packageWeight,
-
-        package_length:
-          packageLength,
-
-        package_width:
-          packageWidth,
-
-        package_height:
-          packageHeight,
-
-        package_count:
-          packageCount,
-
-        declared_value:
-          declaredValue,
-
-        currency:
-          form.currency,
+        declared_value: declaredValue,
+        currency: form.currency,
 
         flight_number:
-          form.flightNumber.trim() ||
-          null,
+          form.flightNumber.trim() || null,
 
         awb_number:
-          form.awbNumber.trim() ||
-          null,
+          form.awbNumber.trim() || null,
 
         estimated_delivery_date:
-          form.estimatedDeliveryDate ||
-          null,
+          form.estimatedDeliveryDate || null,
 
         status,
+        status_code: statusCode,
 
-        status_code:
-          statusCode,
-
-        delivered_at:
-          deliveredAt,
-
-        delivered_to:
-          deliveredTo,
+        delivered_at: deliveredAt,
+        delivered_to: deliveredTo,
 
         delivery_location:
           form.initialStage === "Delivered"
             ? form.operationalLocation.trim()
             : null,
 
-        updated_at:
-          new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       const {
         data: shipment,
         error: shipmentError,
-      } = await supabase
-        .from("shipments")
-        .insert(shipmentPayload)
-        .select()
-        .single();
+      } = await supabase.rpc(
+        "create_parcelpilot_shipment",
+        {
+          p_shipment: shipmentPayload,
+          p_initial_stage: form.initialStage,
+          p_initial_tracking_note:
+            form.initialTrackingNote.trim(),
+          p_operational_location:
+            form.operationalLocation.trim() ||
+            form.originAirport.trim() ||
+            `${form.originCity.trim()}, ${form.originCountry.trim()}`,
+          p_current_latitude: currentLatitude,
+          p_current_longitude: currentLongitude,
+        }
+      );
 
       if (shipmentError || !shipment) {
         throw new Error(
@@ -821,112 +744,129 @@ export default function CreateShipmentPage() {
         );
       }
 
-      createdShipmentId = shipment.id;
-
       /*
-       * Save the manually selected starting
-       * tracking location.
+       * Send shipment-created email after the database insert succeeds.
+       * Email failure must NOT undo the shipment creation.
+       *
+       * IMPORTANT:
+       * Read the response as TEXT first.
+       * This prevents browser console output from collapsing
+       * useful API errors into an empty "{}".
        */
-      const {
-        error: locationError,
-      } = await supabase
-        .from("tracking_locations")
-        .insert({
-          shipment_id:
-            shipment.id,
-
-          latitude:
-            currentLatitude,
-
-          longitude:
-            currentLongitude,
-
-          recorded_at:
-            new Date().toISOString(),
-        });
-
-      if (locationError) {
-        await supabase
-          .from("shipments")
-          .delete()
-          .eq("id", shipment.id);
-
-        throw new Error(
-          `Shipment was not created because the initial tracking location could not be saved: ${locationError.message}`
+      try {
+        const notificationResponse = await fetch(
+          "/api/notifications/shipment-created",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              customerEmail: form.customerEmail.trim(),
+              receiverEmail: form.customerEmail.trim(),
+              trackingNumber: shipment.tracking_number,
+              senderName: form.senderName.trim(),
+              receiverName: form.receiverName.trim(),
+              originCountry: form.originCountry.trim(),
+              destinationCountry: form.destinationCountry.trim(),
+              shippingMode: form.shippingMode,
+              serviceType: form.serviceType,
+              estimatedDeliveryDate:
+                form.estimatedDeliveryDate || "",
+            }),
+          }
         );
-      }
 
-      /*
-       * Create the initial shipment event.
-       */
-      const eventDescription =
-        form.initialTrackingNote.trim() ||
-        `Shipment ${form.initialStage.toLowerCase()}.`;
+        const rawResponse = await notificationResponse.text();
 
-      const {
-        error: eventError,
-      } = await supabase
-        .from("shipment_events")
-        .insert({
-          shipment_id:
-            shipment.id,
-
-          status:
-            form.initialStage,
-
-          status_code:
-            statusCode,
-
-          description:
-            eventDescription,
-
-          location:
-            form.operationalLocation.trim(),
-
-          created_at:
-            new Date().toISOString(),
-        });
-
-      if (eventError) {
-        throw new Error(
-          `Shipment was created, but the initial shipment event could not be saved: ${eventError.message}`
+        console.log(
+          "SHIPMENT EMAIL HTTP STATUS:",
+          notificationResponse.status
         );
-      }
 
-      /*
-       * Create an audit record.
-       */
-      const {
-        error: auditError,
-      } = await supabase
-        .from("shipment_audit_logs")
-        .insert({
-          shipment_id:
-            shipment.id,
+        console.log(
+          "SHIPMENT EMAIL RAW RESPONSE:",
+          rawResponse
+        );
 
-          tracking_number:
-            normalizedTrackingNumber,
+        let notificationData: {
+          success?: boolean;
+          error?: string;
+          errorName?: string | null;
+          statusCode?: number | null;
+          emailId?: string | null;
+          recipient?: string;
+        } = {};
 
-          action:
-            "Shipment Created",
+        try {
+          notificationData = rawResponse
+            ? JSON.parse(rawResponse)
+            : {};
+        } catch {
+          notificationData = {
+            success: false,
+            error: rawResponse || "The email API returned an empty response.",
+          };
+        }
 
-          description:
-            `Shipment created at ${form.operationalLocation.trim()} with initial stage ${form.initialStage}.`,
+        if (
+          !notificationResponse.ok ||
+          notificationData.success !== true
+        ) {
+          const actualError =
+            notificationData.error ||
+            notificationData.errorName ||
+            rawResponse ||
+            `Email API returned HTTP ${notificationResponse.status}.`;
 
-          performed_by:
-            performedBy,
-        });
+          console.error(
+            "SHIPMENT CREATED EMAIL FAILED:",
+            actualError
+          );
 
-      if (auditError) {
+          console.error(
+            "SHIPMENT CREATED EMAIL DETAILS:",
+            {
+              httpStatus: notificationResponse.status,
+              response: notificationData,
+              rawResponse,
+            }
+          );
+
+          setErrorMessage(
+            `Shipment ${shipment.tracking_number} was created, but the email could not be sent: ${actualError}`
+          );
+        } else {
+          console.log(
+            "SHIPMENT CREATED EMAIL SENT:",
+            notificationData
+          );
+
+          setSuccessMessage(
+            `Shipment ${shipment.tracking_number} was created successfully and the notification email was sent.`
+          );
+        }
+      } catch (emailError) {
+        const actualError =
+          emailError instanceof Error
+            ? emailError.message
+            : String(emailError);
+
         console.error(
-          "Audit log error:",
-          auditError
+          "SHIPMENT CREATED EMAIL REQUEST ERROR:",
+          actualError
+        );
+
+        setErrorMessage(
+          `Shipment ${shipment.tracking_number} was created, but the email service could not be reached: ${actualError}`
         );
       }
 
-      setSuccessMessage(
-        `Shipment ${normalizedTrackingNumber} was created successfully.`
-      );
+      setTimeout(() => {
+        router.push(
+          `/operations/shipment?shipment=${shipment.id}`
+        );
+      }, 1800);
 
       setTimeout(() => {
         router.push(
@@ -938,13 +878,6 @@ export default function CreateShipmentPage() {
         "Create shipment error:",
         error
       );
-
-      if (createdShipmentId) {
-        await supabase
-          .from("shipments")
-          .delete()
-          .eq("id", createdShipmentId);
-      }
 
       const message =
         error instanceof Error
@@ -1036,19 +969,15 @@ export default function CreateShipmentPage() {
                       Tracking Number
                     </label>
 
-                    <input
-                      value={
-                        form.trackingNumber
-                      }
-                      onChange={(event) =>
-                        updateField(
-                          "trackingNumber",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Example: PP900002"
-                      className={inputClass}
-                    />
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                      <p className="text-sm font-semibold text-blue-900">
+                        Automatically generated
+                      </p>
+
+                      <p className="mt-1 text-sm text-blue-700">
+                        ParcelPilot will generate a unique PP###### tracking number when this shipment is created.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
@@ -1145,7 +1074,7 @@ export default function CreateShipmentPage() {
                     <p className="mt-1 text-sm leading-6 text-blue-700">
                       These contact details will be used
                       later to send shipment notifications
-                      by email and SMS.
+                      by email.
                     </p>
 
                     <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -1169,33 +1098,7 @@ export default function CreateShipmentPage() {
                           className={inputClass}
                         />
                       </div>
-
-                      <div>
-                        <label className={labelClass}>
-                          Customer Phone
-                        </label>
-
-                        <input
-                          type="tel"
-                          value={
-                            form.customerPhone
-                          }
-                          onChange={(event) =>
-                            updateField(
-                              "customerPhone",
-                              event.target.value
-                            )
-                          }
-                          placeholder="+237 6XX XXX XXX"
-                          className={inputClass}
-                        />
-                      </div>
                     </div>
-
-                    <p className="mt-3 text-xs text-blue-700">
-                      Enter the phone number with the
-                      country code when possible.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -1953,7 +1856,7 @@ export default function CreateShipmentPage() {
 
                         <p className="font-bold text-slate-900">
                           {form.trackingNumber ||
-                            "Not entered"}
+                            "Generated automatically"}
                         </p>
                       </div>
 

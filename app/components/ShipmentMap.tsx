@@ -162,6 +162,47 @@ function MapBounds({ points }: MapBoundsProps) {
   return null;
 }
 
+type CountryLabelProps = {
+  position: Coordinate;
+  country: string;
+  variant: "origin" | "destination";
+};
+
+function CountryLabel({
+  position,
+  country,
+  variant,
+}: CountryLabelProps) {
+  const map = useMap();
+
+  useEffect(() => {
+    const label = L.marker(toLatLng(position), {
+      interactive: false,
+      icon: L.divIcon({
+        className: "parcelpilot-country-label-wrapper",
+        html: `
+          <div
+            class="parcelpilot-country-label"
+            data-variant="${variant}"
+          >
+            ${country}
+          </div>
+        `,
+        iconSize: [1, 1],
+        iconAnchor: [0, 0],
+      }),
+    });
+
+    label.addTo(map);
+
+    return () => {
+      label.remove();
+    };
+  }, [map, position, country, variant]);
+
+  return null;
+}
+
 type RouteLineProps = {
   points: Coordinate[];
   originCountry?: string | null;
@@ -300,6 +341,35 @@ export default function ShipmentMap({
           border-radius: 999px !important;
           box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
         }
+
+        .parcelpilot-country-label-wrapper {
+          background: transparent !important;
+          border: none !important;
+        }
+
+        .parcelpilot-country-label {
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+          padding: 6px 12px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.94);
+          border: 2px solid #0f172a;
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+          color: #0f172a;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+        }
+
+        .parcelpilot-country-label[data-variant="origin"] {
+          border-color: #2563eb;
+          color: #1d4ed8;
+        }
+
+        .parcelpilot-country-label[data-variant="destination"] {
+          border-color: #16a34a;
+          color: #15803d;
+        }
         .route-label-tooltip {
           background: rgba(37, 99, 235, 0.92) !important;
           border: none !important;
@@ -323,6 +393,22 @@ export default function ShipmentMap({
         />
 
         <MapBounds points={mapPoints} />
+
+        {safeOrigin && originCountry && (
+          <CountryLabel
+            position={safeOrigin}
+            country={originCountry}
+            variant="origin"
+          />
+        )}
+
+        {safeDestination && destinationCountry && (
+          <CountryLabel
+            position={safeDestination}
+            country={destinationCountry}
+            variant="destination"
+          />
+        )}
 
         <RouteLine
           points={routePoints}
