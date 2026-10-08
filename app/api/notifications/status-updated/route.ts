@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
@@ -98,8 +99,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://parcelpilot-new.vercel.app";
+
     const trackUrl =
-      `https://parcelpilot-new.vercel.app/track/${encodeURIComponent(
+      `${siteUrl.replace(/\/$/, "")}/track/${encodeURIComponent(
         trackingNumber
       )}`;
 
@@ -282,9 +287,85 @@ export async function POST(request: Request) {
       );
     }
 
+    const emailId = result.data?.id || null;
+
+    /*
+     * Store the Resend email ID immediately.
+     *
+     * Later Resend webhook events can then be matched
+     * to this exact shipment notification.
+     */
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+    const supabaseSecretKey =
+      process.env.SUPABASE_SECRET_KEY;
+
+    if (supabaseUrl && supabaseSecretKey && emailId) {
+      const supabase = createClient(
+        supabaseUrl,
+        supabaseSecretKey,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      );
+
+      const { data: shipment } =
+        await supabase
+          .from("shipments")
+          .select("id")
+          .eq(
+            "tracking_number",
+            trackingNumber
+          )
+          .maybeSingle();
+
+      const { error: activityError } =
+        await supabase
+          .from("email_activity")
+          .insert({
+            shipment_id:
+              shipment?.id || null,
+            tracking_number:
+              trackingNumber,
+            recipient_email:
+              recipient,
+            email_type:
+              "status_updated",
+            event_type:
+              "sent",
+            resend_email_id:
+              emailId,
+            subject:
+              `ParcelPilot Shipment Update - ${trackingNumber} - ${status}`,
+            event_data: {
+              source:
+                "parcelpilot-status-updated",
+              status,
+              statusCode,
+              location,
+              description,
+            },
+          });
+
+      if (activityError) {
+        console.error(
+          "EMAIL ACTIVITY SAVE ERROR:",
+          activityError
+        );
+      }
+    } else {
+      console.warn(
+        "EMAIL ACTIVITY NOT SAVED: missing server configuration or email ID."
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      emailId: result.data?.id || null,
+      emailId,
       recipient,
       trackingNumber,
       status,

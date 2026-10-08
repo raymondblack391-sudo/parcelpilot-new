@@ -215,6 +215,10 @@ export default function CreateShipmentPage() {
     useState<FormData>(initialForm);
 
   const [saving, setSaving] = useState(false);
+  const [geocodingOrigin, setGeocodingOrigin] =
+    useState(false);
+  const [geocodingDestination, setGeocodingDestination] =
+    useState(false);
   const [errorMessage, setErrorMessage] =
     useState("");
   const [successMessage, setSuccessMessage] =
@@ -583,6 +587,97 @@ export default function CreateShipmentPage() {
         top: 0,
         behavior: "smooth",
       });
+    }
+  }
+
+  async function geocodeLocation(
+    type: "origin" | "destination"
+  ) {
+    const isOrigin = type === "origin";
+
+    const country = isOrigin
+      ? form.originCountry.trim()
+      : form.destinationCountry.trim();
+
+    const city = isOrigin
+      ? form.originCity.trim()
+      : form.destinationCity.trim();
+
+    const airport = isOrigin
+      ? form.originAirport.trim()
+      : form.destinationAirport.trim();
+
+    if (!country && !city && !airport) {
+      setErrorMessage(
+        `Enter a ${isOrigin ? "origin" : "destination"} country or city first.`
+      );
+      return;
+    }
+
+    const query = [airport, city, country]
+      .filter(Boolean)
+      .join(", ");
+
+    if (isOrigin) {
+      setGeocodingOrigin(true);
+    } else {
+      setGeocodingDestination(true);
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch(
+        `/api/geocode?q=${encodeURIComponent(query)}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+            `Unable to find coordinates for ${query}.`
+        );
+      }
+
+      const latitude = String(result.latitude);
+      const longitude = String(result.longitude);
+
+      if (isOrigin) {
+        setForm((previous) => ({
+          ...previous,
+          originLatitude: latitude,
+          originLongitude: longitude,
+        }));
+      } else {
+        setForm((previous) => ({
+          ...previous,
+          destinationLatitude: latitude,
+          destinationLongitude: longitude,
+        }));
+      }
+
+      setSuccessMessage(
+        `${isOrigin ? "Origin" : "Destination"} coordinates found successfully.`
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to find coordinates.";
+
+      setErrorMessage(message);
+    } finally {
+      if (isOrigin) {
+        setGeocodingOrigin(false);
+      } else {
+        setGeocodingDestination(false);
+      }
     }
   }
 
@@ -1184,6 +1279,32 @@ export default function CreateShipmentPage() {
                         />
                       </div>
 
+                      <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-blue-900">
+                              Origin Coordinates
+                            </p>
+                            <p className="mt-1 text-xs font-medium text-blue-700">
+                              Automatically find coordinates from the origin airport, city and country.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              geocodeLocation("origin")
+                            }
+                            disabled={geocodingOrigin}
+                            className="rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {geocodingOrigin
+                              ? "Finding Coordinates..."
+                              : "Find Origin Coordinates"}
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <label className={labelClass}>
                           Origin Latitude
@@ -1294,6 +1415,32 @@ export default function CreateShipmentPage() {
                           placeholder="Airport name or code"
                           className={inputClass}
                         />
+                      </div>
+
+                      <div className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-emerald-900">
+                              Destination Coordinates
+                            </p>
+                            <p className="mt-1 text-xs font-medium text-emerald-700">
+                              Automatically find coordinates from the destination airport, city and country.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              geocodeLocation("destination")
+                            }
+                            disabled={geocodingDestination}
+                            className="rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {geocodingDestination
+                              ? "Finding Coordinates..."
+                              : "Find Destination Coordinates"}
+                          </button>
+                        </div>
                       </div>
 
                       <div>
