@@ -1,4 +1,5 @@
 import ShipmentManagementClient from "./ShipmentManagementClient";
+import RequireAuth from "@/app/components/RequireAuth";
 
 type PageProps = {
   searchParams: Promise<{
@@ -13,9 +14,11 @@ export default async function ShipmentPage({
   const params = await searchParams;
 
   return (
-    <ShipmentManagementClient
-      shipmentId={params.shipment || ""}
-      tracking={params.tracking || ""}
-    />
+    <RequireAuth>
+      <ShipmentManagementClient
+        shipmentId={params.shipment || ""}
+        tracking={params.tracking || ""}
+      />
+    </RequireAuth>
   );
 }

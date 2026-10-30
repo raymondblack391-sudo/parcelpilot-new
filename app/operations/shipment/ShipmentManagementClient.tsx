@@ -80,7 +80,7 @@ export default function ShipmentManagementClient({
   shipmentId,
   tracking,
 }: ShipmentManagementClientProps) {
-  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState(tracking || "");
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [events, setEvents] = useState<ShipmentEvent[]>([]);
   const [locations, setLocations] = useState<TrackingLocation[]>([]); // NEW
@@ -178,17 +178,16 @@ export default function ShipmentManagementClient({
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("shipments")
-      .select(`
-        id, tracking_number, sender_name, receiver_name, customer_email, sender_address, receiver_address,
-        origin_country, destination_country, status, status_code, service_type, shipping_mode,
-        package_weight, package_count, flight_number, awb_number,
-        current_latitude, current_longitude, origin_latitude, origin_longitude,
-        destination_latitude, destination_longitude
-      `)
-      .eq("tracking_number", tracking)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc(
+      "get_staff_shipment_by_tracking",
+      {
+        p_tracking_number: tracking,
+      }
+    );
+
+    const shipmentData = Array.isArray(data)
+      ? data[0]
+      : data;
 
     if (error) {
       console.error("Shipment loading error:", error);
@@ -197,30 +196,29 @@ export default function ShipmentManagementClient({
       return;
     }
 
-    if (!data) {
+    if (!shipmentData) {
       setError(`Shipment ${tracking} was not found.`);
       setLoading(false);
       return;
     }
 
-    await finishShipmentLoad(data);
+    await finishShipmentLoad(shipmentData);
   }
 
   async function loadShipmentById(shipmentId: string) {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("shipments")
-      .select(`
-        id, tracking_number, sender_name, receiver_name, customer_email, sender_address, receiver_address,
-        origin_country, destination_country, status, status_code, service_type, shipping_mode,
-        package_weight, package_count, flight_number, awb_number,
-        current_latitude, current_longitude, origin_latitude, origin_longitude,
-        destination_latitude, destination_longitude
-      `)
-      .eq("id", shipmentId)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc(
+      "get_staff_shipment_by_id",
+      {
+        p_shipment_id: shipmentId,
+      }
+    );
+
+    const shipmentData = Array.isArray(data)
+      ? data[0]
+      : data;
 
     if (error) {
       console.error("Shipment loading by ID error:", error);
@@ -229,13 +227,13 @@ export default function ShipmentManagementClient({
       return;
     }
 
-    if (!data) {
+    if (!shipmentData) {
       setError("The shipment could not be found.");
       setLoading(false);
       return;
     }
 
-    await finishShipmentLoad(data);
+    await finishShipmentLoad(shipmentData);
   }
 
   useEffect(() => {
@@ -374,7 +372,7 @@ export default function ShipmentManagementClient({
         );
 
         setMessage(
-          `Shipment ${shipment.tracking_number} updated to "${status}", but the customer email could not be sent.`
+          `Shipment ${shipment.tracking_number} updated to "${status}", but the customer email failed: ${notificationData.error || rawResponse || "Unknown error"}.`
         );
       } else {
         setMessage(
@@ -385,31 +383,51 @@ export default function ShipmentManagementClient({
       console.error("STATUS EMAIL REQUEST FAILED:", emailError);
 
       setMessage(
-        `Shipment ${shipment.tracking_number} updated to "${status}", but the customer email could not be sent.`
+        `Shipment ${shipment.tracking_number} updated to "${status}", but the email request failed: ${emailError instanceof Error ? emailError.message : String(emailError)}.`
       );
     }
 
     setUpdating(false);
   }
 
-  // NEW: geocode a place name the same way create-shipment does
+  // Convert a place name into coordinates using /api/geocode.
   async function geocodePlace(place: string) {
-    const response = await fetch(`/api/geocode?q=${encodeURIComponent(place)}`);
+    const response = await fetch(
+      `/api/geocode?q=${encodeURIComponent(place.trim())}`,
+      { cache: "no-store" }
+    );
+
     const data = await response.json();
 
-    if (!response.ok || !Array.isArray(data) || data.length === 0) {
-      throw new Error(`Could not find a location for "${place}".`);
+    if (!response.ok || data?.success !== true) {
+      throw new Error(
+        data?.error || `Could not find a location for "${place}".`
+      );
     }
 
-    const result = data[0];
-    const lat = Number(result.lat);
-    const lon = Number(result.lon);
+    const latitude = Number(data.latitude);
+    const longitude = Number(data.longitude);
 
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      throw new Error(`The location service returned an invalid position for "${place}".`);
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw new Error(
+        `The location service returned invalid coordinates for "${place}".`
+      );
     }
 
-    return { latitude: lat, longitude: lon, name: result.display_name?.trim() || place };
+    return {
+      latitude,
+      longitude,
+      name: typeof data.displayName === "string" && data.displayName.trim()
+        ? data.displayName.trim()
+        : place.trim(),
+    };
   }
 
   // NEW: add a manual tracking location and move the map marker

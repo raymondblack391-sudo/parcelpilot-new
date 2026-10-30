@@ -962,12 +962,6 @@ export default function CreateShipmentPage() {
           `/operations/shipment?shipment=${shipment.id}`
         );
       }, 1800);
-
-      setTimeout(() => {
-        router.push(
-          `/operations/shipment?shipment=${shipment.id}`
-        );
-      }, 1200);
     } catch (error) {
       console.error(
         "Create shipment error:",

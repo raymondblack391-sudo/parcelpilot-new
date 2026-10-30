@@ -406,10 +406,24 @@ export default async function TrackingPage({
     typedShipment.destination_longitude
   );
 
-  const currentLocation = coordinate(
-    typedShipment.current_latitude,
-    typedShipment.current_longitude
-  );
+  // Prefer the latest valid recorded location for the live map marker.
+  // This keeps the customer map aligned with location history if the
+  // shipment table's current coordinates have not been updated.
+  const latestValidLocation = [...trackingLocations]
+    .reverse()
+    .find((item) =>
+      isValidCoordinate(item.latitude, item.longitude)
+    );
+
+  const currentLocation = latestValidLocation
+    ? coordinate(
+        latestValidLocation.latitude,
+        latestValidLocation.longitude
+      )
+    : coordinate(
+        typedShipment.current_latitude,
+        typedShipment.current_longitude
+      );
 
   const locationRoute: Coordinate[] =
     trackingLocations
@@ -1455,6 +1469,9 @@ export default async function TrackingPage({
                   destinationAirportLocation
                 }
                 status={typedShipment.status}
+                shipmentId={typedShipment.id}
+                originCountry={typedShipment.origin_country}
+                destinationCountry={typedShipment.destination_country}
                 flightNumber={
                   typedShipment.flight_number
                 }

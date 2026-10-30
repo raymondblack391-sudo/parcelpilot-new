@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://parcelpilot-new.vercel.app";
+      "https://www.parcelpilotlogistics.com";
 
     const trackUrl =
       `${siteUrl.replace(/\/$/, "")}/track/${encodeURIComponent(
@@ -106,6 +106,16 @@ export async function POST(request: Request) {
       from: fromEmail,
       to: [recipient],
       subject: `ParcelPilot Shipment Created - ${trackingNumber}`,
+      text: `Your ParcelPilot shipment has been created.
+
+Tracking number: ${trackingNumber}
+Estimated delivery: ${estimatedDeliveryDate}
+
+Track your shipment:
+${trackUrl}
+
+ParcelPilot Logistics`,
+
       html: `
 <!DOCTYPE html>
 <html>
