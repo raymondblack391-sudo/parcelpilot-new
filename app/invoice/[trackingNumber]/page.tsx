@@ -147,7 +147,7 @@ export default function InvoicePage() {
 
         <section className="mt-6 grid grid-cols-2 gap-6">
           <div className="rounded-lg border border-slate-300 p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Billed shipment — Sender</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Sender</p>
             <p className="mt-2 font-black">{invoice.senderName || "—"}</p>
             <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{invoice.senderAddress || ""}</p>
             <p className="mt-1 text-sm font-semibold">{invoice.originCountry || ""}</p>
