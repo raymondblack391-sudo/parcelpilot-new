@@ -854,7 +854,18 @@ export default function ShipmentManagementClient({
 
           <section>
             <div className="rounded-xl bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900">Shipment Details</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-bold text-slate-900">Shipment Details</h2>
+                {shipment?.tracking_number && (
+                  <Link
+                    href={`/operations/shipment/waybill/${encodeURIComponent(shipment.tracking_number)}`}
+                    target="_blank"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-500"
+                  >
+                    Waybill
+                  </Link>
+                )}
+              </div>
               <div className="mt-6 space-y-5">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-400">Shipping Mode</p>
