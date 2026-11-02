@@ -27,3 +27,5 @@ proxy.ts.disabled
 **/*.save
 .vercel
 .env*
+
+!.env.example
