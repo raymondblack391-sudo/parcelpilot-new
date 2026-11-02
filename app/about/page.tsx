@@ -54,12 +54,6 @@ export default function AboutPage() {
               Track Shipment
             </Link>
 
-            <Link
-              href="/login"
-              className="rounded-xl bg-orange-500 px-4 py-2.5 text-white transition hover:bg-orange-400"
-            >
-              Staff Portal
-            </Link>
           </nav>
 
           <Link

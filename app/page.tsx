@@ -198,12 +198,6 @@ export default function Home() {
               Track Shipment
             </Link>
 
-            <Link
-              href="/login"
-              className="ml-2 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              Staff Portal
-            </Link>
           </nav>
 
           <Link
@@ -1176,9 +1170,6 @@ export default function Home() {
                   Track Shipment
                 </Link>
 
-                <Link href="/login" className="block hover:text-white">
-                  Staff Portal
-                </Link>
               </div>
             </div>
 

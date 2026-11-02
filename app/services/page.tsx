@@ -472,12 +472,6 @@ export default function ServicesPage() {
                   Track Shipment
                 </Link>
 
-                <Link
-                  href="/login"
-                  className="transition hover:text-orange-400"
-                >
-                  Staff Portal
-                </Link>
               </div>
             </div>
           </div>
