@@ -249,6 +249,13 @@ export default function ContactPage() {
                 title="Logistics Services"
                 text="Contact us about courier, express, air, road, rail and international logistics."
               />
+
+              <ContactInfo
+                icon="✉️"
+                title="Email Us"
+                text="support@parcelpilotlogistics.com"
+                href="mailto:support@parcelpilotlogistics.com"
+              />
             </div>
 
             <div className="mt-10 overflow-hidden rounded-3xl bg-slate-950 shadow-xl">
@@ -566,10 +573,12 @@ function ContactInfo({
   icon,
   title,
   text,
+  href,
 }: {
   icon: string;
   title: string;
   text: string;
+  href?: string;
 }) {
   return (
     <div className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-orange-200 hover:shadow-md">
@@ -581,7 +590,16 @@ function ContactInfo({
         <h3 className="font-black">{title}</h3>
 
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          {text}
+          {href ? (
+            <a
+              href={href}
+              className="font-bold text-orange-600 transition hover:text-orange-500"
+            >
+              {text}
+            </a>
+          ) : (
+            text
+          )}
         </p>
       </div>
     </div>

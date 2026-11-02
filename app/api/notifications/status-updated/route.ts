@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       "https://www.parcelpilotlogistics.com";
 
     const trackUrl =
-      `${siteUrl.replace(/\/$/, "")}/track/${encodeURIComponent(
+      `${siteUrl.replace(/\/$/, "")}/api/track-click/${encodeURIComponent(
         trackingNumber
       )}`;
 
