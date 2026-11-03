@@ -62,15 +62,6 @@ export async function POST(request: Request) {
       return NextResponse.json(NOT_FOUND, { status: 404 });
     }
 
-    const cost = Number(shipment.shipping_cost);
-    if (!Number.isFinite(cost) || cost <= 0) {
-      return NextResponse.json({
-        success: true,
-        ready: false,
-        message: "Your invoice is not available yet. Please check back soon or contact support.",
-      });
-    }
-
     return NextResponse.json({
       success: true,
       ready: true,
@@ -78,6 +69,7 @@ export async function POST(request: Request) {
         number: `INV-${shipment.tracking_number}`,
         date: shipment.created_at,
         trackingNumber: shipment.tracking_number,
+        status: shipment.status,
         senderName: shipment.sender_name,
         senderAddress: shipment.sender_address,
         receiverName: shipment.receiver_name,
@@ -89,8 +81,8 @@ export async function POST(request: Request) {
         packageCount: shipment.package_count,
         packageWeight: shipment.package_weight,
         awbNumber: shipment.awb_number,
-        currency: shipment.currency || "EUR",
-        shippingCost: cost,
+        flightNumber: shipment.flight_number,
+        estimatedDelivery: shipment.estimated_delivery_date,
       },
     });
   } catch (error) {

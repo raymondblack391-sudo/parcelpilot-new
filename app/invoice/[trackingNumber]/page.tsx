@@ -15,6 +15,7 @@ type Invoice = {
   number: string;
   date: string | null;
   trackingNumber: string;
+  status: string | null;
   senderName: string | null;
   senderAddress: string | null;
   receiverName: string | null;
@@ -26,22 +27,25 @@ type Invoice = {
   packageCount: number | null;
   packageWeight: number | null;
   awbNumber: string | null;
-  currency: string;
-  shippingCost: number;
+  flightNumber: string | null;
+  estimatedDelivery: string | null;
 };
-
-function money(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`;
-  }
-}
 
 function dateText(value: string | null) {
   if (!value) return "—";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+}
+
+function Row({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <tr className="border-t border-slate-200">
+      <td className="w-1/3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500">{label}</td>
+      <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+        {value === null || value === undefined || value === "" ? "—" : value}
+      </td>
+    </tr>
+  );
 }
 
 export default function InvoicePage() {
@@ -50,13 +54,11 @@ export default function InvoicePage() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [invoice, setInvoice] = useState<Invoice | null>(null);
 
   async function submit() {
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       const res = await fetch("/api/invoice", {
         method: "POST",
@@ -66,8 +68,6 @@ export default function InvoicePage() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.error || "Unable to load the invoice.");
-      } else if (!data.ready) {
-        setNotice(data.message || "Your invoice is not available yet.");
       } else {
         setInvoice(data.invoice as Invoice);
       }
@@ -99,7 +99,6 @@ export default function InvoicePage() {
             className="mt-5 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
           />
           {error && <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>}
-          {notice && <p className="mt-3 text-sm font-semibold text-slate-700">{notice}</p>}
           <button
             type="button"
             onClick={submit}
@@ -161,38 +160,23 @@ export default function InvoicePage() {
         </section>
 
         <section className="mt-6 overflow-hidden rounded-lg border border-slate-300">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-              </tr>
-            </thead>
+          <table className="w-full">
             <tbody>
-              <tr className="border-t border-slate-200 align-top">
-                <td className="px-4 py-4">
-                  <p className="font-bold">
-                    {[invoice.shippingMode, invoice.serviceType].filter(Boolean).join(" — ") || "Shipping service"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Tracking {invoice.trackingNumber}
-                    {invoice.awbNumber ? ` · AWB ${invoice.awbNumber}` : ""} ·{" "}
-                    {invoice.packageCount ?? 1} package(s)
-                    {invoice.packageWeight ? ` · ${invoice.packageWeight} kg` : ""}
-                  </p>
-                </td>
-                <td className="px-4 py-4 text-right font-bold">{money(invoice.shippingCost, invoice.currency)}</td>
-              </tr>
-              <tr className="border-t-2 border-slate-900 bg-slate-50">
-                <td className="px-4 py-4 text-right font-black uppercase tracking-wider">Total</td>
-                <td className="px-4 py-4 text-right text-lg font-black">{money(invoice.shippingCost, invoice.currency)}</td>
-              </tr>
+              <Row label="Tracking number" value={invoice.trackingNumber} />
+              <Row label="Shipping mode" value={invoice.shippingMode} />
+              <Row label="Service" value={invoice.serviceType} />
+              <Row label="AWB number" value={invoice.awbNumber} />
+              <Row label="Flight number" value={invoice.flightNumber} />
+              <Row label="Packages" value={invoice.packageCount} />
+              <Row label="Weight" value={invoice.packageWeight ? `${invoice.packageWeight} kg` : null} />
+              <Row label="Estimated delivery" value={invoice.estimatedDelivery ? dateText(invoice.estimatedDelivery) : null} />
+              <Row label="Status" value={invoice.status} />
             </tbody>
           </table>
         </section>
 
         <p className="mt-8 text-center text-[11px] text-slate-500">
-          Questions about this invoice? Contact {COMPANY.email}
+          Questions about this document? Contact {COMPANY.email}
         </p>
       </article>
     </main>
