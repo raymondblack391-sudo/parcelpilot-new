@@ -281,10 +281,24 @@ export default function ShipmentManagementClient({
     setMessage("");
     setError("");
 
-    const { error: shipmentError } = await supabase
+    const { data: updatedRows, error: shipmentError } = await supabase
       .from("shipments")
       .update({ status, status_code: statusCode, updated_at: new Date().toISOString() })
-      .eq("id", shipment.id);
+      .eq("id", shipment.id)
+      .select("id");
+
+    if (!shipmentError && (!updatedRows || updatedRows.length === 0)) {
+      console.error("Shipment update changed 0 rows (blocked by a database rule?)");
+      const { data: who } = await supabase.auth.getUser();
+      setError(
+        "The shipment was NOT updated: the database refused the change. Signed in as: " +
+          (who?.user?.email || "nobody (not signed in)") +
+          " / " +
+          (who?.user?.id || "no id")
+      );
+      setUpdating(false);
+      return;
+    }
 
     if (shipmentError) {
       console.error("Shipment update error:", shipmentError);
